@@ -111,10 +111,10 @@ h1{font-size:1.25rem;font-weight:800;margin:0 0 .25rem}
 
 <script>
 const KEY='ls_enclosure_ship_v1', MAX=6;
-let S={screen:'start',date:'',unit:'',page:0,photos:Array(MAX).fill(null)};
+let S={screen:'start',date:'',total:'',unit:'',name:'',page:0,photos:Array(MAX).fill(null)};
 const items=()=>S.photos.map((p,i)=>p?Object.assign({},p,{label:i+1}):null).filter(Boolean);
 const count=()=>S.photos.filter(Boolean).length;
-const unitLabel=()=>S.unit.trim()+'대째';
+const unitLabel=()=>S.total.trim()+'대 중 '+S.unit.trim()+'번째';
 const cleanUnit=v=>String(v||'').replace(/[^0-9]/g,'');
 function todayStr(){const d=new Date(),z=n=>String(n).padStart(2,'0');return d.getFullYear()+'-'+z(d.getMonth()+1)+'-'+z(d.getDate())}
 
@@ -123,7 +123,7 @@ function safeSet(k,v){try{localStorage.setItem(k,v);return true}catch(e){return 
 function load(){
   try{const j=safeGet(KEY);if(j){const o=JSON.parse(j);if(o&&Array.isArray(o.photos))S=Object.assign(S,o)}}catch(e){}
   S.photos=Array.from({length:MAX},(_,i)=>S.photos[i]||null);
-  S.unit=cleanUnit(S.unit);
+  S.unit=cleanUnit(S.unit);S.total=cleanUnit(S.total);S.name=String(S.name||'');
   if(!S.date)S.date=todayStr();
 }
 let warned=false;
@@ -162,27 +162,37 @@ function renderStart(){
   $('app').innerHTML=`
   <section class="card">
     <h1>ENCLOSURE 출하사진 촬영</h1>
-    <p class="sub">날짜와 몇 대째인지 입력하고 촬영을 시작하세요.</p>
+    <p class="sub">날짜, 출하 대수, 몇 번째인지, 촬영자를 입력하고 촬영을 시작하세요.</p>
     <label class="lb" for="dt">날짜</label>
     <input id="dt" class="in" style="margin-bottom:1.25rem" type="date" value="${esc(S.date)}" oninput="S.date=this.value;save()">
-    <label class="lb" for="unit">몇 대째</label>
-    <div class="row">
-      <input id="unit" class="in" style="flex:1;min-width:0" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="숫자 입력" value="${esc(S.unit)}" oninput="S.unit=cleanUnit(this.value);this.value=S.unit;save()">
-      <span class="pre" style="font-size:1.2rem;white-space:nowrap">대째</span>
+    <label class="lb" for="total">오늘 출하 대수</label>
+    <div class="row" style="margin-bottom:1.25rem">
+      <input id="total" class="in" style="flex:1;min-width:0" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="예: 20" value="${esc(S.total)}" oninput="S.total=cleanUnit(this.value);this.value=S.total;save()">
+      <span class="pre" style="font-size:1.2rem;white-space:nowrap">대</span>
     </div>
+    <label class="lb" for="unit">몇 번째</label>
+    <div class="row" style="margin-bottom:1.25rem">
+      <input id="unit" class="in" style="flex:1;min-width:0" type="text" inputmode="numeric" pattern="[0-9]*" autocomplete="off" placeholder="예: 3" value="${esc(S.unit)}" oninput="S.unit=cleanUnit(this.value);this.value=S.unit;save()">
+      <span class="pre" style="font-size:1.2rem;white-space:nowrap">번째</span>
+    </div>
+    <label class="lb" for="nm">촬영자</label>
+    <input id="nm" class="in" style="margin-bottom:1.25rem" type="text" autocomplete="off" placeholder="이름 입력" value="${esc(S.name)}" oninput="S.name=this.value;save()">
     <button class="big" onclick="startShoot()">촬영 시작</button>
     <p id="err" class="err" style="display:none"></p>
   </section>
   ${resume?`<section class="card">
     <div style="font-weight:700;margin-bottom:.25rem">진행 중인 촬영이 있습니다</div>
-    <div class="meta" style="margin-bottom:.75rem">${esc(S.date)} · ${esc(unitLabel())} · 사진 ${count()} / ${MAX}장</div>
+    <div class="meta" style="margin-bottom:.75rem">${esc(S.date)} · ${esc(unitLabel())} · ${esc(S.name)} · 사진 ${count()} / ${MAX}장</div>
     <button class="big dark" style="height:3rem;font-size:1rem" onclick="S.screen='shoot';save();render()">이어서 촬영</button>
   </section>`:''}`;
 }
 async function startShoot(){
   const e=$('err');
   if(!S.date){e.textContent='날짜를 선택해 주세요.';e.style.display='';return}
-  if(!S.unit.trim()){e.textContent='몇 대째인지 숫자를 입력해 주세요.';e.style.display='';$('unit').focus();return}
+  if(!S.total.trim()){e.textContent='오늘 출하 대수를 입력해 주세요.';e.style.display='';$('total').focus();return}
+  if(!S.unit.trim()){e.textContent='몇 번째인지 숫자를 입력해 주세요.';e.style.display='';$('unit').focus();return}
+  if(Number(S.unit)>Number(S.total)){e.textContent='번째 숫자가 출하 대수보다 클 수 없습니다.';e.style.display='';$('unit').focus();return}
+  if(!S.name.trim()){e.textContent='촬영자 이름을 입력해 주세요.';e.style.display='';$('nm').focus();return}
   if(count()>0&&!(await ask('이전에 촬영한 사진 '+count()+'장이 있습니다.\n새로 시작하면 지워집니다. 계속할까요?','새로 시작')))return;
   S.photos=Array(MAX).fill(null);S.page=0;S.screen='shoot';save();render();window.scrollTo(0,0);
 }
@@ -277,6 +287,7 @@ function renderReview(){
   <section class="card">
     <div class="meta">ENCLOSURE 출하사진</div>
     <div class="serial">${esc(S.date)} · ${esc(unitLabel())}</div>
+    <div class="meta" style="margin-top:.25rem">촬영자: ${esc(S.name)}</div>
     <div class="ok" style="margin-top:.5rem">사진 ${count()}장 촬영 완료</div>
   </section>
   <section class="card"><div class="thumbs">
@@ -289,7 +300,7 @@ function renderReview(){
 }
 async function resetAll(){
   if(!(await ask('현재 촬영 데이터를 지우고 처음 화면으로 돌아갈까요?\n저장하지 않은 사진은 사라집니다.','새 검사')))return;
-  S={screen:'start',date:S.date||todayStr(),unit:'',page:0,photos:Array(MAX).fill(null)};
+  S={screen:'start',date:S.date||todayStr(),total:S.total,unit:'',name:S.name,page:0,photos:Array(MAX).fill(null)};
   save();render();window.scrollTo(0,0);
 }
 
@@ -320,19 +331,19 @@ function makeZip(files){
 const xe=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g,'');
 function b64ToBytes(d){const b=atob(d.split(',')[1]),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return u}
 
-const ROWPT=150, ROWPX=200, COLB_PX=390, BOX_W=370, BOX_H=190, FIRST=4; // 사진 시작 행(1-based)
+const ROWPT=150, ROWPX=200, COLB_PX=390, BOX_W=370, BOX_H=190, FIRST=5; // 사진 시작 행(1-based)
 function sheetXml(){
-  const info=[['날짜',S.date],['몇 대째',unitLabel()]];
+  const info=[['날짜',S.date],['출하 대수 / 순번',unitLabel()],['촬영자',S.name.trim()]];
   let rows='';
   info.forEach((r,i)=>{
     rows+=`<row r="${i+1}" ht="22" customHeight="1"><c r="A${i+1}" s="2" t="inlineStr"><is><t>${xe(r[0])}</t></is></c><c r="B${i+1}" s="3" t="inlineStr"><is><t xml:space="preserve">${xe(r[1])}</t></is></c></row>`;
   });
-  rows+=`<row r="3" ht="24" customHeight="1"><c r="A3" s="1" t="inlineStr"><is><t>No</t></is></c><c r="B3" s="1" t="inlineStr"><is><t>사진</t></is></c></row>`;
+  rows+=`<row r="4" ht="24" customHeight="1"><c r="A4" s="1" t="inlineStr"><is><t>No</t></is></c><c r="B4" s="1" t="inlineStr"><is><t>사진</t></is></c></row>`;
   items().forEach((p,i)=>{
     const r=FIRST+i;
     rows+=`<row r="${r}" ht="${ROWPT}" customHeight="1"><c r="A${r}" s="4"><v>${p.label}</v></c><c r="B${r}" s="6"/></row>`;
   });
-  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><cols><col min="1" max="1" width="14" customWidth="1"/><col min="2" max="2" width="55" customWidth="1"/></cols><sheetData>'+rows+'</sheetData><pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/><drawing r:id="rId1"/></worksheet>';
+  return '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>\n<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><cols><col min="1" max="1" width="18" customWidth="1"/><col min="2" max="2" width="55" customWidth="1"/></cols><sheetData>'+rows+'</sheetData><pageMargins left="0.5" right="0.5" top="0.6" bottom="0.6" header="0.3" footer="0.3"/><drawing r:id="rId1"/></worksheet>';
 }
 function stylesXml(){
   const border='<border><left style="thin"><color rgb="FF94A3B8"/></left><right style="thin"><color rgb="FF94A3B8"/></right><top style="thin"><color rgb="FF94A3B8"/></top><bottom style="thin"><color rgb="FF94A3B8"/></bottom><diagonal/></border>';
@@ -379,7 +390,7 @@ function buildXlsxBlob(){
   items().forEach((p,i)=>files.push({name:`xl/media/image${i+1}.jpeg`,bin:b64ToBytes(p.data)}));
   return makeZip(files);
 }
-const fileBase=()=>(S.date+'_'+S.unit.trim()+'대째_ENCLOSURE_출하사진').replace(/[\\/:*?"<>|\s]/g,'_');
+const fileBase=()=>(S.date+'_'+S.total.trim()+'대중'+S.unit.trim()+'번째_'+S.name.trim()+'_ENCLOSURE_출하사진').replace(/[\\/:*?"<>|\s]/g,'_');
 function downloadXlsx(){
   const a=document.createElement('a');
   a.href=URL.createObjectURL(buildXlsxBlob());
