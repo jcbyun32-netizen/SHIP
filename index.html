@@ -5,6 +5,11 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#ffffff">
 <meta name="color-scheme" content="light only">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="출하사진">
 <title>ENCLOSURE 출하사진 촬영</title>
 <style>
 *{box-sizing:border-box}
@@ -396,6 +401,7 @@ function fitVp(){
 }
 setH();window.addEventListener('resize',setH);window.addEventListener('orientationchange',()=>setTimeout(setH,200));
 if(window.visualViewport){window.visualViewport.addEventListener('resize',setH)}
+if('serviceWorker' in navigator){window.addEventListener('load',()=>{try{navigator.serviceWorker.register('sw.js').catch(()=>{})}catch(e){}})}
 load();
 if(S.screen!=='start'&&!(S.unit&&S.unit.trim()))S.screen='start';
 if(S.screen==='review'&&count()<MAX)S.screen='shoot';
